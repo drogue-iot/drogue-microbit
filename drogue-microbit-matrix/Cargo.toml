@@ -8,7 +8,7 @@ categories = ["embedded", "no-std"]
 
 [dependencies]
 cortex-m = "0.6.4"
-nrf51-hal = { path = "../../../nrf-hal/nrf51-hal", features = ["rt"] }
+nrf51-hal = { git = "https://github.com/nrf-rs/nrf-hal", branch = "master", features = ["rt"] }
 
 [dependencies.embedded-hal]
 version = "0.2.3"
