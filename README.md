@@ -6,7 +6,7 @@ as example applications.
 # Build
 
 ```
-cargo build
+cargo build --release
 ```
 
 # Program
