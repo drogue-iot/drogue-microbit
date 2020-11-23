@@ -1,0 +1,19 @@
+[package]
+authors = ["Ulf Lilleengen <ulf.lilleengen@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+name = "drogue-microbit-matrix"
+version = "0.1.0"
+categories = ["embedded", "no-std"]
+
+[dependencies]
+cortex-m = "0.6.4"
+nrf51-hal = { path = "../../../nrf-hal/nrf51-hal", features = ["rt"] }
+
+[dependencies.embedded-hal]
+version = "0.2.3"
+features = ["unproven"]
+
+[dependencies.void]
+default-features = false
+version = "1.0.2"
