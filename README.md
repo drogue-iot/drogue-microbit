@@ -23,5 +23,5 @@ To program:
 telnet localhost 4444
 
 # Enter the following in the openocd CLI:
-program target/thumbv6m-none-eabi/release/drogue-microbit-rtc-rtic verify reset
+program target/thumbv6m-none-eabi/release/rtc-rtic verify reset
 ```
