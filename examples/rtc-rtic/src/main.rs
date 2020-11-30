@@ -9,6 +9,7 @@ use drogue_microbit_matrix::LedMatrix;
 
 use hal::rtc::{Rtc, RtcInterrupt};
 use rtic::app;
+use rtt_target::{rprintln, rtt_init_print};
 
 use nrf51_hal as hal;
 
@@ -22,6 +23,7 @@ const APP: () = {
 
     #[init]
     fn init(ctx: init::Context) -> init::LateResources {
+        rtt_init_print!();
         let port0 = hal::gpio::p0::Parts::new(ctx.device.GPIO);
 
         let led = LedMatrix::new(port0);
@@ -33,6 +35,8 @@ const APP: () = {
         rtc.enable_event(RtcInterrupt::Tick);
         rtc.enable_counter();
         rtc.enable_interrupt(RtcInterrupt::Tick, None);
+
+        rprintln!("Started application");
 
         init::LateResources {
             rtc: rtc,
