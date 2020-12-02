@@ -97,12 +97,6 @@ impl AttributeProvider for EnvironmentSensingService {
                 },
             )?;
         }
-
-        /*
-         let value = self.sensor.value();
-
-         att.set_value(&data);
-        att*/
         Ok(())
     }
 

@@ -44,10 +44,10 @@ const APP: () = {
 
         // Temperature sensing
         thermometer: hal::Temp,
-        temperature: [u8; 4],
+        temperature: [u8; 1],
         rtc: Rtc<hal::pac::RTC0>,
         #[init(0)]
-        timer_count: u32,
+        timer_count: i8,
 
         #[init([0; MIN_PDU_BUF])]
         ble_tx_buf: PacketBuffer,
@@ -103,14 +103,14 @@ const APP: () = {
         // Create the actual BLE stack objects
         let mut ble_ll = LinkLayer::<AppConfig>::new(device_address, ble_timer);
 
-        static temperature: [u8; 4] = [0; 4];
-        let ess: EnvironmentSensingService = EnvironmentSensingService::new(&temperature);
+        static TEMPERATURE: [u8; 1] = [0; 1];
+        let ess: EnvironmentSensingService = EnvironmentSensingService::new(&TEMPERATURE);
 
         let ble_r = Responder::new(tx, rx, L2CAPState::new(BleChannelMap::with_attributes(ess)));
 
         let next_update = ble_ll
             .start_advertise(
-                Duration::from_millis(200),
+                Duration::from_millis(50),
                 &[AdStructure::CompleteLocalName("Drogue IoT micro:bit")],
                 &mut radio,
                 tx_cons,
@@ -122,7 +122,7 @@ const APP: () = {
 
         init::LateResources {
             //led: led,
-            temperature: temperature,
+            temperature: TEMPERATURE,
             radio: radio,
             ble_ll: ble_ll,
             ble_r: ble_r,
@@ -190,16 +190,13 @@ const APP: () = {
             value.map_or_else(
                 |_| {},
                 |value| {
-                    let f = value.to_num::<i32>() - 4;
+                    let f = value.to_num::<u8>() - 4;
                     for i in 0..f {
                         let row = (i as usize / 5) % 5;
                         let col = i as usize % 5;
                         // ctx.resources.led.on(row, col);
                     }
-                    ctx.resources.temperature[0] = ((f >> 24) & 0xFF) as u8;
-                    ctx.resources.temperature[1] = ((f >> 16) & 0xFF) as u8;
-                    ctx.resources.temperature[2] = ((f >> 8) & 0xFF) as u8;
-                    ctx.resources.temperature[3] = (f & 0xFF) as u8;
+                    ctx.resources.temperature[0] = f;
                     log::info!("Temperature: {}", f);
                 },
             );
