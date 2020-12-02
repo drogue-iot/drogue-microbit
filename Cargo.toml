@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "drogue-microbit-matrix",
+    "drogue-microbit-ess",
     "examples/*",
 ]
 
