@@ -5,7 +5,6 @@
 #[allow(unused_imports)]
 use panic_halt;
 
-use core::sync::atomic::{compiler_fence, Ordering};
 // use drogue_microbit_matrix::LedMatrix;
 use drogue_microbit_ess::EnvironmentSensingService;
 
@@ -44,7 +43,6 @@ const APP: () = {
 
         // Temperature sensing
         thermometer: hal::Temp,
-        temperature: [u8; 1],
         rtc: Rtc<hal::pac::RTC0>,
         #[init(0)]
         timer_count: i8,
@@ -103,8 +101,7 @@ const APP: () = {
         // Create the actual BLE stack objects
         let mut ble_ll = LinkLayer::<AppConfig>::new(device_address, ble_timer);
 
-        static TEMPERATURE: [u8; 1] = [0; 1];
-        let ess: EnvironmentSensingService = EnvironmentSensingService::new(&TEMPERATURE);
+        let ess: EnvironmentSensingService = EnvironmentSensingService::new();
 
         let ble_r = Responder::new(tx, rx, L2CAPState::new(BleChannelMap::with_attributes(ess)));
 
@@ -122,7 +119,6 @@ const APP: () = {
 
         init::LateResources {
             //led: led,
-            temperature: TEMPERATURE,
             radio: radio,
             ble_ll: ble_ll,
             ble_r: ble_r,
@@ -175,7 +171,7 @@ const APP: () = {
         }*/
     }
 
-    #[task(binds = RTC0, resources = [rtc, thermometer, timer_count, temperature])]
+    #[task(binds = RTC0, resources = [rtc, thermometer, timer_count, ble_r])]
     fn rtc0(ctx: rtc0::Context) {
         ctx.resources.rtc.reset_event(RtcInterrupt::Compare0);
         ctx.resources.rtc.clear_counter();
@@ -190,14 +186,29 @@ const APP: () = {
             value.map_or_else(
                 |_| {},
                 |value| {
-                    let f = value.to_num::<u8>() - 4;
+                    let f = value.to_num::<u32>() - 4;
                     for i in 0..f {
-                        let row = (i as usize / 5) % 5;
-                        let col = i as usize % 5;
+                        let _row = (i as usize / 5) % 5;
+                        let _col = i as usize % 5;
                         // ctx.resources.led.on(row, col);
                     }
-                    ctx.resources.temperature[0] = f;
-                    log::info!("Temperature: {}", f);
+
+                    let l2cap = &mut *(ctx.resources.ble_r.l2cap());
+                    let provider: &mut EnvironmentSensingService =
+                        l2cap.channel_mapper().attribute_provider();
+                    provider.set_temperature(f);
+
+                    /*
+                    let result = provider.for_attrs_in_range(
+                        HandleRange::new(Handle::from_raw(1), Handle::from_raw(0xFFFF)),
+                        |_, att| {
+                            log::info!("Attr: {:?}", att.value);
+                            Ok(())
+                        },
+                    );*/
+                    /*.lock(|temperature| {
+                        *temperature = f;
+                    });*/
                 },
             );
             ctx.resources.thermometer.stop_measurement();
@@ -207,11 +218,17 @@ const APP: () = {
 
     #[idle(resources = [ble_r])]
     fn idle(ctx: idle::Context) -> ! {
+        let idle::Resources { mut ble_r } = ctx.resources;
         loop {
-            while ctx.resources.ble_r.has_work() {
-                log::info!("processing...");
-                ctx.resources.ble_r.process_one().unwrap();
-            }
+            ble_r.lock(|ble_r| {
+                while ble_r.has_work() {
+                    log::info!("processing...");
+                    ble_r.process_one().unwrap();
+                }
+            });
+
+            //log::info!("Done:!");*/
+            //compiler_fence(Ordering::SeqCst);
         }
     }
 
@@ -223,6 +240,8 @@ const APP: () = {
             //    ctx.resources.led.clear();
             //    ctx.resources.led.on(0, 0);
         }
+
+
 
         // Fully drain the packet queue
         while ctx.resources.ble_r.has_work() {
