@@ -1,16 +1,13 @@
-
 [default.probe]
 # The index of the probe in the connected probe list.
-# probe_index = 0
+probe_index = 0
 # The protocol to be used for communicating with the target.
 protocol = "Swd"
 # The speed in kHz of the data link to the target.
 # speed = 1337
-#probe_selector = "0483:3748"
 
-#probe_selector = "0483:374b"
-#usb_vid = "0483"
-#usb_pid = "374b"
+usb_vid = "0d28"
+usb_pid = "0204"
 #serial = "066EFF3134354D5043075734"
 
 [default.flashing]
@@ -27,7 +24,8 @@ restore_unwritten_bytes = false
 [default.general]
 # The chip name of the chip to be debugged.
 # chip = "name"
-chip = "nrf51822"
+#chip = "nRF52833_xxAA"
+chip = "nRF51822"
 # A list of chip descriptions to be loaded during runtime.
 chip_descriptions = []
 # The default log level to be used.

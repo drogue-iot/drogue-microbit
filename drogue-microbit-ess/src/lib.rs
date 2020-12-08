@@ -17,9 +17,9 @@ pub struct EnvironmentSensingService {
     attributes: [Attribute<Value>; 3],
 }
 
-const ATT_PRIMARY_SERVICE: AttUuid = AttUuid::Uuid16(Uuid16(0x2800));
-const ATT_CHARACTERISTIC_DEFINITION: AttUuid = AttUuid::Uuid16(Uuid16(0x2803));
-const ATT_CHARACTERISTIC_TEMPERATURE_MEASUREMENT: AttUuid = AttUuid::Uuid16(Uuid16(0x2A1C));
+const PRIMARY_SERVICE_UUID: Uuid16 = Uuid16(0x2800);
+pub const ESS_UUID: Uuid16 = Uuid16(0x2803);
+const ESS_TEMPERATURE_MEASUREMENT: Uuid16 = Uuid16(0x2A1C);
 
 impl AttrValue for Value {
     fn as_slice(&self) -> &[u8] {
@@ -36,13 +36,13 @@ impl EnvironmentSensingService {
         Self {
             attributes: [
                 Attribute::new(
-                    ATT_PRIMARY_SERVICE,
+                    AttUuid::Uuid16(PRIMARY_SERVICE_UUID),
                     Handle::from_raw(0x0001),
                     Value::ServiceDef([0x1A, 0x18]),
                 ), // "ES Service" = 0x181A
                 // Define temperature measurement
                 Attribute::new(
-                    ATT_CHARACTERISTIC_DEFINITION,
+                    AttUuid::Uuid16(ESS_UUID),
                     Handle::from_raw(0x0002),
                     Value::CharDef([
                         0x02, // 1 byte properties: READ = 0x02, NOTIFY = 0x10
@@ -52,7 +52,7 @@ impl EnvironmentSensingService {
                 ),
                 // Characteristic value (Temperature measurement)
                 Attribute::new(
-                    ATT_CHARACTERISTIC_TEMPERATURE_MEASUREMENT,
+                    AttUuid::Uuid16(ESS_TEMPERATURE_MEASUREMENT),
                     Handle::from_raw(0x0003),
                     Value::CharValue([0; 4]),
                 ),
@@ -95,11 +95,10 @@ impl EnvironmentSensingService {
 }
 
 impl AttributeProvider for EnvironmentSensingService {
-    type ValueType = Value;
     fn for_attrs_in_range(
         &mut self,
         range: HandleRange,
-        mut f: impl FnMut(&Self, &Attribute<Self::ValueType>) -> Result<(), Error>,
+        mut f: impl FnMut(&Self, &Attribute<dyn AttrValue>) -> Result<(), Error>,
     ) -> Result<(), Error> {
         let count = self.attributes.len();
         let start = usize::from(range.start().as_u16() - 1); // handles start at 1, not 0
@@ -124,7 +123,7 @@ impl AttributeProvider for EnvironmentSensingService {
         uuid == Uuid16(0x2800) // FIXME not characteristics?
     }
 
-    fn group_end(&self, handle: Handle) -> Option<&Attribute<Self::ValueType>> {
+    fn group_end(&self, handle: Handle) -> Option<&Attribute<dyn AttrValue>> {
         match handle.as_u16() {
             0x0001 => Some(&self.attributes[2]),
             0x0002 => Some(&self.attributes[2]),

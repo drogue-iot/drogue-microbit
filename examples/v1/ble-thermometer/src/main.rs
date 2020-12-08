@@ -6,10 +6,12 @@
 use panic_halt;
 
 // use drogue_microbit_matrix::LedMatrix;
-use drogue_microbit_ess::EnvironmentSensingService;
+use drogue_microbit_ess::{EnvironmentSensingService, ESS_UUID};
 
 use nrf51_hal as hal;
+// use nrf52833_hal as hal;
 
+use core::sync::atomic::{compiler_fence, Ordering};
 use hal::rtc::{Rtc, RtcCompareReg, RtcInterrupt};
 use log::LevelFilter;
 use rtt_logger::RTTLogger;
@@ -17,7 +19,10 @@ use rtt_target::rtt_init_print;
 
 use rubble::l2cap::{BleChannelMap, L2CAPState};
 use rubble::link::queue::{PacketQueue, SimpleQueue};
-use rubble::link::{ad_structure::AdStructure, LinkLayer, Responder, MIN_PDU_BUF};
+use rubble::link::{
+    ad_structure::{AdStructure, ServiceUuids},
+    LinkLayer, Responder, MIN_PDU_BUF,
+};
 use rubble::time::{Duration, Timer};
 use rubble::{config::Config, security::NoSecurity};
 use rubble_nrf5x::radio::{BleRadio, PacketBuffer};
@@ -107,8 +112,11 @@ const APP: () = {
 
         let next_update = ble_ll
             .start_advertise(
-                Duration::from_millis(50),
-                &[AdStructure::CompleteLocalName("Drogue IoT micro:bit")],
+                Duration::from_millis(100),
+                &[
+                    AdStructure::CompleteLocalName("Drogue IoT micro:bit"),
+                    AdStructure::ServiceUuids16(ServiceUuids::from_uuids(true, &[ESS_UUID])),
+                ],
                 &mut radio,
                 tx_cons,
                 rx_prod,
@@ -127,7 +135,7 @@ const APP: () = {
         }
     }
 
-    #[task(binds = RADIO, resources = [radio, ble_ll], priority = 3)]
+    #[task(binds = RADIO, resources = [radio, ble_ll], spawn = [ble_worker], priority = 3)]
     fn radio(ctx: radio::Context) {
         let ble_ll: &mut LinkLayer<AppConfig> = ctx.resources.ble_ll;
         if let Some(cmd) = ctx
@@ -138,16 +146,15 @@ const APP: () = {
             ctx.resources.radio.configure_receiver(cmd.radio);
             ble_ll.timer().configure_interrupt(cmd.next_update);
 
-            /*
             if cmd.queued_work {
                 // If there's any lower-priority work to be done, ensure that happens.
                 // If we fail to spawn the task, it's already scheduled.
                 ctx.spawn.ble_worker().ok();
-            }*/
+            }
         }
     }
 
-    #[task(binds = TIMER0, resources = [radio, ble_ll], priority = 3)]
+    #[task(binds = TIMER0, resources = [radio, ble_ll], spawn = [ble_worker], priority = 3)]
     fn timer0(ctx: timer0::Context) {
         let timer = ctx.resources.ble_ll.timer();
         if !timer.is_interrupt_pending() {
@@ -163,26 +170,31 @@ const APP: () = {
             .timer()
             .configure_interrupt(cmd.next_update);
 
-        /*
         if cmd.queued_work {
             // If there's any lower-priority work to be done, ensure that happens.
             // If we fail to spawn the task, it's already scheduled.
             ctx.spawn.ble_worker().ok();
-        }*/
+        }
     }
 
-    #[task(binds = RTC0, resources = [rtc, thermometer, timer_count, ble_r])]
+    #[task(binds = RTC0, resources = [rtc, thermometer, timer_count, ble_r], priority = 1)]
     fn rtc0(ctx: rtc0::Context) {
-        ctx.resources.rtc.reset_event(RtcInterrupt::Compare0);
-        ctx.resources.rtc.clear_counter();
-        if *ctx.resources.timer_count % 2 == 0 {
+        let rtc0::Resources {
+            rtc,
+            thermometer,
+            timer_count,
+            mut ble_r,
+        } = ctx.resources;
+        rtc.reset_event(RtcInterrupt::Compare0);
+        rtc.clear_counter();
+        if *timer_count % 2 == 0 {
             //ctx.resources.led.clear();
             //ctx.resources.led.on(1, 1);
-            ctx.resources.thermometer.start_measurement();
+            thermometer.start_measurement();
         } else {
             //ctx.resources.led.clear();
 
-            let value = ctx.resources.thermometer.read();
+            let value = thermometer.read();
             value.map_or_else(
                 |_| {},
                 |value| {
@@ -193,10 +205,12 @@ const APP: () = {
                         // ctx.resources.led.on(row, col);
                     }
 
-                    let l2cap = &mut *(ctx.resources.ble_r.l2cap());
-                    let provider: &mut EnvironmentSensingService =
-                        l2cap.channel_mapper().attribute_provider();
-                    provider.set_temperature(f);
+                    ble_r.lock(|ble_r| {
+                        let l2cap = &mut *(ble_r.l2cap());
+                        let provider: &mut EnvironmentSensingService =
+                            l2cap.channel_mapper().attribute_provider();
+                        provider.set_temperature(f);
+                    });
 
                     /*
                     let result = provider.for_attrs_in_range(
@@ -211,43 +225,27 @@ const APP: () = {
                     });*/
                 },
             );
-            ctx.resources.thermometer.stop_measurement();
+            thermometer.stop_measurement();
         }
-        *ctx.resources.timer_count += 1;
+        *timer_count += 1;
     }
 
-    #[idle(resources = [ble_r])]
-    fn idle(ctx: idle::Context) -> ! {
-        let idle::Resources { mut ble_r } = ctx.resources;
+    #[idle]
+    fn idle(_ctx: idle::Context) -> ! {
         loop {
-            ble_r.lock(|ble_r| {
-                while ble_r.has_work() {
-                    log::info!("processing...");
-                    ble_r.process_one().unwrap();
-                }
-            });
-
-            //log::info!("Done:!");*/
-            //compiler_fence(Ordering::SeqCst);
+            compiler_fence(Ordering::SeqCst);
         }
     }
 
-    /*
     #[task(resources = [ble_r], priority = 2)]
     fn ble_worker(ctx: ble_worker::Context) {
-        if ctx.resources.ble_r.has_work() {
-            log::info!("Worker has work to do");
-            //    ctx.resources.led.clear();
-            //    ctx.resources.led.on(0, 0);
-        }
-
-
+        let ble_worker::Resources { ble_r } = ctx.resources;
 
         // Fully drain the packet queue
-        while ctx.resources.ble_r.has_work() {
-            ctx.resources.ble_r.process_one().unwrap();
+        while ble_r.has_work() {
+            ble_r.process_one().unwrap();
         }
-    }*/
+    }
 
     extern "C" {
         fn WDT();

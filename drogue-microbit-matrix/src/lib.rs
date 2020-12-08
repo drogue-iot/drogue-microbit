@@ -1,8 +1,13 @@
-#![no_std]
+#![no_std, no_main]
 
 use embedded_hal::digital::v2::OutputPin;
 use hal::gpio::{Level, Output, Pin, PushPull};
+
+#[cfg(feature = "51")]
 use nrf51_hal as hal;
+
+#[cfg(feature = "52833")]
+use nrf52833_hal as hal;
 
 pub struct LedMatrix {
     rows: [Pin<Output<PushPull>>; 3],
