@@ -86,6 +86,8 @@ const APP: () = {
 
         let device_address = get_device_address();
 
+        log::info!("Starting to advertise with address {:?}", device_address);
+
         let mut radio = BleRadio::new(
             ctx.device.RADIO,
             &ctx.device.FICR,
@@ -203,6 +205,7 @@ const APP: () = {
 
     #[idle]
     fn idle(_ctx: idle::Context) -> ! {
+        log::info!("Drogue IoT micro:bit started!");
         loop {
             compiler_fence(Ordering::SeqCst);
         }
