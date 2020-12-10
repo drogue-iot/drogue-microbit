@@ -5,11 +5,9 @@
 #[allow(unused_imports)]
 use panic_halt;
 
-// use drogue_microbit_matrix::LedMatrix;
 use drogue_microbit_ess::{EnvironmentSensingService, ESS_UUID};
 
 use nrf51_hal as hal;
-// use nrf52833_hal as hal;
 
 use core::sync::atomic::{compiler_fence, Ordering};
 use hal::rtc::{Rtc, RtcCompareReg, RtcInterrupt};
@@ -44,8 +42,6 @@ impl Config for AppConfig {
 #[app(device = crate::hal::pac, peripherals = true)]
 const APP: () = {
     struct Resources {
-        //led: LedMatrix,
-
         // Temperature sensing
         thermometer: hal::Temp,
         rtc: Rtc<hal::pac::RTC0>,
@@ -74,8 +70,6 @@ const APP: () = {
         }
 
         let _port0 = hal::gpio::p0::Parts::new(ctx.device.GPIO);
-
-        //let led = LedMatrix::new(port0);
 
         let clocks = hal::clocks::Clocks::new(ctx.device.CLOCK).enable_ext_hfosc();
         let _clocks = clocks.start_lfclk();
@@ -126,7 +120,6 @@ const APP: () = {
         ble_ll.timer().configure_interrupt(next_update);
 
         init::LateResources {
-            //led: led,
             radio: radio,
             ble_ll: ble_ll,
             ble_r: ble_r,
@@ -188,41 +181,19 @@ const APP: () = {
         rtc.reset_event(RtcInterrupt::Compare0);
         rtc.clear_counter();
         if *timer_count % 2 == 0 {
-            //ctx.resources.led.clear();
-            //ctx.resources.led.on(1, 1);
             thermometer.start_measurement();
         } else {
-            //ctx.resources.led.clear();
-
             let value = thermometer.read();
             value.map_or_else(
                 |_| {},
                 |value| {
                     let f = value.to_num::<u32>() - 4;
-                    for i in 0..f {
-                        let _row = (i as usize / 5) % 5;
-                        let _col = i as usize % 5;
-                        // ctx.resources.led.on(row, col);
-                    }
-
                     ble_r.lock(|ble_r| {
                         let l2cap = &mut *(ble_r.l2cap());
                         let provider: &mut EnvironmentSensingService =
                             l2cap.channel_mapper().attribute_provider();
                         provider.set_temperature(f);
                     });
-
-                    /*
-                    let result = provider.for_attrs_in_range(
-                        HandleRange::new(Handle::from_raw(1), Handle::from_raw(0xFFFF)),
-                        |_, att| {
-                            log::info!("Attr: {:?}", att.value);
-                            Ok(())
-                        },
-                    );*/
-                    /*.lock(|temperature| {
-                        *temperature = f;
-                    });*/
                 },
             );
             thermometer.stop_measurement();
