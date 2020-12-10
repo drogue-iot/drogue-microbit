@@ -3,7 +3,6 @@ members = [
     "drogue-microbit-matrix",
     "drogue-microbit-ess",
     "examples/v1/*",
-#    "examples/v2/*",
 ]
 
 [profile.release]

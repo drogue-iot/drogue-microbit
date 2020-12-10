@@ -28,7 +28,7 @@ use rubble::{config::Config, security::NoSecurity};
 use rubble_nrf5x::radio::{BleRadio, PacketBuffer};
 use rubble_nrf5x::{timer::BleTimer, utils::get_device_address};
 
-static LOGGER: RTTLogger = RTTLogger::new(LevelFilter::Trace);
+static LOGGER: RTTLogger = RTTLogger::new(LevelFilter::Debug);
 
 use rtic::app;
 
@@ -68,7 +68,7 @@ const APP: () = {
     #[init(resources = [ble_tx_buf, ble_rx_buf, tx_queue, rx_queue])]
     fn init(ctx: init::Context) -> init::LateResources {
         rtt_init_print!();
-        log::set_max_level(log::LevelFilter::Trace);
+        log::set_max_level(log::LevelFilter::Debug);
         unsafe {
             log::set_logger_racy(&LOGGER).unwrap();
         }
