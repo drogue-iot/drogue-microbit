@@ -9,11 +9,5 @@ categories = ["embedded", "no-std"]
 [dependencies]
 cortex-m = "0.6.4"
 nrf51-hal = { version = "0.12.0", features = ["rt"] }
-
-[dependencies.embedded-hal]
-version = "0.2.3"
-features = ["unproven"]
-
-[dependencies.void]
-default-features = false
-version = "1.0.2"
+embedded-hal = { version = "0.2.3", features = ["unproven"] }
+void = { version = "1.0.2", default-features = false }

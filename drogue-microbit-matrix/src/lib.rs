@@ -2,6 +2,7 @@
 
 use embedded_hal::digital::v2::OutputPin;
 use hal::gpio::{Level, Output, Pin, PushPull};
+
 use nrf51_hal as hal;
 
 pub struct LedMatrix {

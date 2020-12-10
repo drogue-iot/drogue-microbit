@@ -1,0 +1,12 @@
+[package]
+authors = ["Ulf Lilleengen <ulf.lilleengen@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+name = "drogue-microbit-ess"
+version = "0.1.0"
+categories = ["embedded", "no-std"]
+description = "Drogue IoT environmental sensing service"
+
+[dependencies]
+rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["log"]}
+log = "0.4.11"

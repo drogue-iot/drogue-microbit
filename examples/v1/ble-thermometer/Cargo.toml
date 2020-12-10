@@ -1,0 +1,26 @@
+[package]
+authors = ["Ulf Lilleengen <ulf.lilleengen@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+name = "ble-thermometer"
+version = "0.1.0"
+
+[dependencies]
+cortex-m = "0.6.4"
+cortex-m-rt = { version = "0.6.11", features = ["device"] }
+cortex-m-rtic = "0.5.5"
+rtt-target = {version = "0.2.0", features = ["cortex-m"] }
+panic-halt = "0.2.0"
+nrf51-hal = { version = "0.12.0", features = ["rt"] }
+drogue-microbit-ess = { path = "../../../drogue-microbit-ess" }
+rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["log"]}
+rubble-nrf5x = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["51"] }
+log = "0.4.11"
+rtt-logger = "0.1.0"
+embedded-hal = { version = "0.2.3", features = ["unproven"] }
+void = { version = "1.0.2", default-features = false }
+
+[[bin]]
+name = "ble-thermometer"
+test = false
+bench = false

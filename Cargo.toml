@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "drogue-microbit-matrix",
-    "examples/*",
+    "drogue-microbit-ess",
+    "examples/v1/*",
 ]
 
 [profile.release]

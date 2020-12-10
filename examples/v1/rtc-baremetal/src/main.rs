@@ -14,15 +14,23 @@ use embedded_hal::digital::v2::OutputPin;
 use hal::gpio::{Level, Output, Pin, PushPull};
 use hal::pac::interrupt;
 use hal::rtc::{Rtc, RtcInterrupt};
-use rtt_target::{rprintln, rtt_init_print};
+use log::LevelFilter;
+use rtt_logger::RTTLogger;
+use rtt_target::rtt_init_print;
 
 static COUNTER: Mutex<Cell<u32>> = Mutex::new(Cell::new(0));
 static RTC: Mutex<RefCell<Option<Rtc<hal::pac::RTC0>>>> = Mutex::new(RefCell::new(None));
 static LED: Mutex<RefCell<Option<Pin<Output<PushPull>>>>> = Mutex::new(RefCell::new(None));
+static LOGGER: RTTLogger = RTTLogger::new(LevelFilter::Debug);
 
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
+
+    unsafe {
+        log::set_logger_racy(&LOGGER).unwrap();
+    }
+    log::set_max_level(log::LevelFilter::Debug);
     let mut cp = peripheral::Peripherals::take().unwrap();
     let p = hal::pac::Peripherals::take().unwrap();
     let port0 = hal::gpio::p0::Parts::new(p.GPIO);
@@ -46,7 +54,7 @@ fn main() -> ! {
         cortex_m::interrupt::enable();
     }
 
-    rprintln!("Started application");
+    log::info!("Started application");
 
     loop {}
 }
