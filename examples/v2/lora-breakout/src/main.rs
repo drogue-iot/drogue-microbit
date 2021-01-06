@@ -4,7 +4,9 @@
 
 use panic_halt as _;
 
-use core::fmt::Write;
+use core::sync::atomic::{compiler_fence, Ordering};
+use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::serial::{Read, Write};
 use log::LevelFilter;
 use rtic::app;
 use rtt_logger::RTTLogger;
@@ -12,7 +14,8 @@ use rtt_target::rtt_init_print;
 
 use nrf52833_hal as hal;
 
-use hal::gpio::{Input, Level, Output, Pin, PullUp, PushPull};
+use drogue_rak811 as rak811;
+use hal::gpio::Level;
 use hal::pac::{TIMER0, UARTE0};
 use hal::timer::Timer;
 use hal::uarte::*;
@@ -23,8 +26,7 @@ static LOGGER: RTTLogger = RTTLogger::new(LevelFilter::Debug);
 const APP: () = {
     struct Resources {
         count: usize,
-        uarte: Uarte<UARTE0>,
-        uarte_timer: Timer<TIMER0>,
+        driver: rak811::Rak811Driver<serial::UarteTx<UARTE0>, serial::UarteRx<UARTE0>>,
     }
 
     #[init]
@@ -39,7 +41,19 @@ const APP: () = {
         let clocks = hal::clocks::Clocks::new(ctx.device.CLOCK).enable_ext_hfosc();
         let _clocks = clocks.start_lfclk();
 
-        let _ = port1.p1_02.into_push_pull_output(Level::High).degrade();
+        let mut rst = port1.p1_02.into_push_pull_output(Level::High).degrade();
+        let mut cnt: u64 = 0;
+        while cnt < 5000000 {
+            cnt += 1;
+            compiler_fence(Ordering::SeqCst);
+        }
+        let _ = rst.set_low();
+        cnt = 0;
+        while cnt < 5000000 {
+            cnt += 1;
+            compiler_fence(Ordering::SeqCst);
+        }
+
         let uarte = Uarte::new(
             ctx.device.UARTE0,
             Pins {
@@ -52,44 +66,43 @@ const APP: () = {
             Baudrate::BAUD115200,
         );
 
+        let (uarte_tx, uarte_rx) = uarte.split_serial();
+
+        let driver = rak811::Rak811Driver::new(uarte_tx, uarte_rx);
+
         log::info!("Started application");
 
-        init::LateResources {
-            count: 0,
-            uarte,
-            uarte_timer: Timer::new(ctx.device.TIMER0),
-        }
+        init::LateResources { count: 0, driver }
     }
 
-    #[idle(resources=[uarte, uarte_timer])]
+    #[idle(resources=[driver])]
     fn idle(ctx: idle::Context) -> ! {
-        let idle::Resources { uarte, uarte_timer } = ctx.resources;
+        let idle::Resources { driver } = ctx.resources;
 
-        let result = write!(uarte, "at+get_config=device:status");
-        match result {
-            Ok(_) => {
-                log::info!("Success writing AT command");
-            }
-            Err(_) => {
-                log::info!("Error writing AT command");
-            }
-        }
-
-        let uarte_rx_buf = &mut [0u8; 64][..];
         loop {
-            match uarte.read_timeout(uarte_rx_buf, uarte_timer, 100_000) {
-                Ok(_) => {
-                    if let Ok(msg) = core::str::from_utf8(&uarte_rx_buf[..]) {
-                        log::info!("{}", msg);
-                    }
+            log::info!("Querying firmware Version");
+            match driver.send(rak811::Command::QueryFirmwareInfo) {
+                Ok(response) => log::info!("Response: {:?}", response),
+                Err(e) => {
+                    log::info!("Send error: {:?}", e);
                 }
-                Err(hal::uarte::Error::Timeout(n)) if n > 0 => {
-                    if let Ok(msg) = core::str::from_utf8(&uarte_rx_buf[..n]) {
-                        log::info!("{}", msg);
-                    }
-                }
-                _ => {}
             }
+
+            match driver.send(rak811::Command::GetBand) {
+                Ok(response) => log::info!("Response: {:?}", response),
+                Err(e) => {
+                    log::info!("Send error: {:?}", e);
+                }
+            }
+
+            compiler_fence(Ordering::SeqCst);
+
+            let mut cnt: u64 = 0;
+            while cnt < 10000000 {
+                cnt += 1;
+                compiler_fence(Ordering::SeqCst);
+            }
+            log::trace!("VALUE IS: {}", cnt);
         }
     }
 };
