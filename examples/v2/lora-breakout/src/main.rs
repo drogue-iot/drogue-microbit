@@ -80,18 +80,17 @@ const APP: () = {
         let idle::Resources { driver } = ctx.resources;
 
         loop {
-            log::info!("Querying firmware Version");
             match driver.send(rak811::Command::QueryFirmwareInfo) {
-                Ok(response) => log::info!("Response: {:?}", response),
+                Ok(response) => log::info!("Firmware version: {:?}", response),
                 Err(e) => {
-                    log::info!("Send error: {:?}", e);
+                    log::info!("Command error: {:?}", e);
                 }
             }
 
             match driver.send(rak811::Command::GetBand) {
-                Ok(response) => log::info!("Response: {:?}", response),
+                Ok(response) => log::info!("Band: {:?}", response),
                 Err(e) => {
-                    log::info!("Send error: {:?}", e);
+                    log::info!("Command error: {:?}", e);
                 }
             }
 
