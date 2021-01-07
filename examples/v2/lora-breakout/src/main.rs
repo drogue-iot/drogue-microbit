@@ -26,10 +26,14 @@ static LOGGER: RTTLogger = RTTLogger::new(LevelFilter::Debug);
 const APP: () = {
     struct Resources {
         count: usize,
-        driver: rak811::Rak811Driver<serial::UarteTx<UARTE0>, serial::UarteRx<UARTE0>>,
+        #[init([0; 1])]
+        tx_buf: [u8; 1],
+        #[init([0; 1])]
+        rx_buf: [u8; 1],
+        driver: rak811::Rak811Driver<UarteTx<'static, UARTE0>, UarteRx<'static, UARTE0>>,
     }
 
-    #[init]
+    #[init(resources = [tx_buf, rx_buf])]
     fn init(ctx: init::Context) -> init::LateResources {
         rtt_init_print!();
         log::set_logger(&LOGGER).unwrap();
@@ -66,7 +70,9 @@ const APP: () = {
             Baudrate::BAUD115200,
         );
 
-        let (uarte_tx, uarte_rx) = uarte.split_serial();
+        let (uarte_tx, uarte_rx) = uarte
+            .split(ctx.resources.tx_buf, ctx.resources.rx_buf)
+            .unwrap();
 
         let driver = rak811::Rak811Driver::new(uarte_tx, uarte_rx);
 
@@ -79,29 +85,24 @@ const APP: () = {
     fn idle(ctx: idle::Context) -> ! {
         let idle::Resources { driver } = ctx.resources;
 
+        send_command(driver, rak811::Command::QueryFirmwareInfo);
+        send_command(driver, rak811::Command::GetBand);
+
         loop {
-            match driver.send(rak811::Command::QueryFirmwareInfo) {
-                Ok(response) => log::info!("Firmware version: {:?}", response),
-                Err(e) => {
-                    log::info!("Command error: {:?}", e);
-                }
-            }
-
-            match driver.send(rak811::Command::GetBand) {
-                Ok(response) => log::info!("Band: {:?}", response),
-                Err(e) => {
-                    log::info!("Command error: {:?}", e);
-                }
-            }
-
             compiler_fence(Ordering::SeqCst);
-
-            let mut cnt: u64 = 0;
-            while cnt < 10000000 {
-                cnt += 1;
-                compiler_fence(Ordering::SeqCst);
-            }
-            log::trace!("VALUE IS: {}", cnt);
         }
     }
 };
+
+fn send_command(
+    driver: &mut rak811::Rak811Driver<UarteTx<'static, UARTE0>, UarteRx<'static, UARTE0>>,
+    command: rak811::Command,
+) {
+    log::info!("Sending command: {:?}", command);
+    match driver.send(command) {
+        Ok(response) => log::info!("Response: {:?}", response),
+        Err(e) => {
+            log::info!("Command error: {:?}", e);
+        }
+    }
+}
