@@ -1,5 +1,7 @@
 # drogue-microbit
 
+*NOTE* Consider using [drogue-device](https://github.com/drogue-iot/drogue-device) instead, as the drogue-microbit crate is no longer actively maintained.
+
 Drogue IoT on the BBC micro:bit. This repository contains crates for micro:bit peripherals as well
 as example applications.
 
