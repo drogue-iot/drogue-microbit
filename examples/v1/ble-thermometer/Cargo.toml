@@ -13,8 +13,8 @@ rtt-target = {version = "0.2.0", features = ["cortex-m"] }
 panic-halt = "0.2.0"
 nrf51-hal = { version = "0.12.0", features = ["rt"] }
 drogue-microbit-ess = { path = "../../../drogue-microbit-ess" }
-rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["log"]}
-rubble-nrf5x = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["51"] }
+rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, rev = "e11c20bf10fda1c6cc8096f47de46e68d8831888", features = ["log"]}
+rubble-nrf5x = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, rev = "e11c20bf10fda1c6cc8096f47de46e68d8831888", features = ["51"] }
 log = "0.4.11"
 rtt-logger = "0.1.0"
 embedded-hal = { version = "0.2.3", features = ["unproven"] }

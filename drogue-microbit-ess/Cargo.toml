@@ -8,5 +8,5 @@ categories = ["embedded", "no-std"]
 description = "Drogue IoT environmental sensing service"
 
 [dependencies]
-rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, features = ["log"]}
+rubble = { git = "https://github.com/jonas-schievink/rubble.git", default-features = false, rev = "e11c20bf10fda1c6cc8096f47de46e68d8831888", features = ["log"]}
 log = "0.4.11"
